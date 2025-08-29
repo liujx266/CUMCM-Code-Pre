@@ -10,11 +10,12 @@
 
 ### 核心特色
 
-- **覆盖全面**: 包含13个核心算法，覆盖90%的CUMCM常用算法需求
+- **覆盖全面**: 包含14个核心算法，覆盖95%的CUMCM常用算法需求
 - **即拿即用**: 每个算法都有清晰的接口设计和详细的使用示例
 - **文档完善**: 提供算法原理、适用场景、参数说明和扩展应用
 - **代码规范**: 统一的代码风格和注释规范，易于理解和修改
 - **性能优化**: 基于成熟的科学计算库，保证算法效率和数值稳定性
+- **智能推荐**: XGBoost等算法提供智能参数推荐功能
 
 ## 算法库结构
 
@@ -31,7 +32,7 @@ CUMCM-Code-Pre/
 │   ├── M_B3_ParticleSwarmOptimization.py # 粒子群优化
 │   ├── M_B4_SimulatedAnnealing.py        # 模拟退火算法
 │   ├── M_B5_LinearProgramming.py         # 线性规划算法
-│   ├── B1.md ~ B4.md                     # 算法说明文档
+│   ├── B1.md ~ B5.md                     # 算法说明文档
 │   └── ...
 ├── C/                     # C类 - 统计分析建模
 │   ├── M_C1_PCA.py                  # 主成分分析
@@ -40,7 +41,8 @@ CUMCM-Code-Pre/
 │   ├── M_C4_AHP.py                 # 层次分析法
 │   ├── M_C5_MultipleRegression.py  # 多元回归分析
 │   ├── M_C6_ClusterAnalysis.py     # 聚类分析
-│   ├── C1.md ~ C4.md               # 算法说明文档
+│   ├── M_C7_XGBoost.py             # XGBoost梯度提升
+│   ├── C1.md ~ C7.md               # 算法说明文档
 │   └── ...
 └── README.md              # 项目说明文档
 ```
@@ -52,7 +54,7 @@ CUMCM-Code-Pre/
 
 ### 依赖库
 ```bash
-pip install numpy scipy scikit-learn matplotlib pandas statsmodels
+pip install numpy scipy scikit-learn matplotlib pandas statsmodels xgboost
 ```
 
 ### 可选依赖
@@ -72,7 +74,7 @@ cd CUMCM-Code-Pre
 ```bash
 pip install -r requirements.txt  # 如果有requirements.txt文件
 # 或者手动安装核心依赖
-pip install numpy scipy scikit-learn matplotlib pandas
+pip install numpy scipy scikit-learn matplotlib pandas statsmodels xgboost
 ```
 
 ### 3. 运行示例
@@ -102,6 +104,21 @@ matrix = np.array([[1, 3, 1/2], [1/3, 1, 1/4], [2, 4, 1]])
 weights, CR = ahp(matrix)
 print(f"权重向量: {weights}")
 print(f"一致性比率: {CR:.4f}")
+
+# C类示例：XGBoost机器学习预测
+from C.M_C7_XGBoost import xgb_classification, feature_importance_analysis
+
+# 模拟数据
+X = np.random.rand(1000, 5)
+y = ['类别A' if x[0] + x[1] > 1 else '类别B' for x in X]
+
+# 分类建模
+model, results = xgb_classification(X, y)
+print(f"测试准确率: {results['test_accuracy']:.4f}")
+
+# 特征重要性
+importance = feature_importance_analysis(model)
+print(importance.head(3))
 ```
 
 ## 算法详览
@@ -123,7 +140,7 @@ print(f"一致性比率: {CR:.4f}")
 | **模拟退火** | `M_B4_SimulatedAnnealing.py` | 组合优化、全局搜索 | TSP问题、调度问题 |
 | **线性规划** | `M_B5_LinearProgramming.py` | 线性约束优化 | 资源分配、生产计划 |
 
-### C类 - 统计分析建模 (6个算法)
+### C类 - 统计分析建模 (7个算法)
 
 | 算法 | 文件名 | 主要用途 | 典型应用 |
 |------|--------|----------|----------|
@@ -133,6 +150,7 @@ print(f"一致性比率: {CR:.4f}")
 | **层次分析法** | `M_C4_AHP.py` | 权重确定 | 指标权重、决策权重 |
 | **多元回归** | `M_C5_MultipleRegression.py` | 预测建模 | 房价预测、影响因素分析 |
 | **聚类分析** | `M_C6_ClusterAnalysis.py` | 数据分类 | 客户细分、市场分析 |
+| **XGBoost** | `M_C7_XGBoost.py` | 集成学习预测 | 分类预测、特征重要性分析 |
 
 ## 使用指南
 
@@ -147,8 +165,8 @@ print(f"一致性比率: {CR:.4f}")
 - 适用于：资源调度、路径规划、参数优化
 
 **C题（统计分析类）推荐组合：**
-- AHP权重 + 回归预测 + 聚类分类 + TOPSIS决策
-- 适用于：数据挖掘、趋势分析、综合评价
+- AHP权重 + XGBoost/回归预测 + 聚类分类 + TOPSIS决策
+- 适用于：数据挖掘、趋势分析、综合评价、机器学习建模
 
 ### 代码使用模式
 
