@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "B/B3.md",
+                "file": "README.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "B3"
+              "title": "README"
             }
           }
         ]
@@ -171,8 +171,9 @@
   },
   "active": "b2f5e71f19990762",
   "lastOpenFiles": [
-    "B/B2.md",
     "MATLAB-Git-Usage-Guide.md",
+    "B/B3.md",
+    "B/B2.md",
     "B/B1.md",
     "A/A1.md"
   ]
