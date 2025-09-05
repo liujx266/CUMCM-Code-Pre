@@ -76,7 +76,7 @@
             }
           }
         ],
-        "currentTab": 2
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -224,8 +224,19 @@
       "bases:创建新数据库": false
     }
   },
-  "active": "7459a8cfff025860",
+  "active": "f90513225a11e29c",
   "lastOpenFiles": [
+    "问题一相关特性整理.md",
+    "code/gam_output/GAM_logistic_summary.csv",
+    "code/gam_output/t_at_targets_by_BMI.csv",
+    "code/gam_output/LogisticGAM_Prob_vs_Week_byBMI.png",
+    "code/gam_output/GAM_continuous_summary.csv",
+    "code/gam_output/GAM_partial_dependence.png",
+    "code/gam_models_fixed.py",
+    "code/GAM_partial_effects_msyh_fixed.png",
+    "code/gam_output",
+    "code/gam_models.py",
+    "code/python gam_models.py",
     "code/partialcorr_output/partialcorr_Y_vs_BMI_splineWeek_noheader.png",
     "code/partialcorr_output/partialcorr_Y_vs_week_splineBMI_noheader.png",
     "code/partialcorr_output/partialcorr_Y_vs_BMI_noheader.png",
@@ -233,21 +244,11 @@
     "code/partialcorr_output/partialcorr_Y_vs_BMI_splineWeek.png",
     "code/partialcorr_output/partialcorr_Y_vs_week_splineBMI.png",
     "问题四思路分析.md",
-    "问题一相关特性整理.md",
     "code/partialcorr_output/partialcorr_residuals.csv",
     "code/partialcorr_output/partialcorr_summary.csv",
     "code/partialcorr_output/partialcorr_Y_vs_BMI.png",
-    "code/partialcorr_output/partialcorr_Y_vs_week.png",
     "code/partialcorr_output",
-    "code/partial_corr_plots.py",
-    "code/test6.py",
-    "code/~$fujian.xlsx",
-    "code/~$合并结果去重-手动去掉异常值并补零.xlsx",
-    "code/合并结果去重-手动去掉异常值并补零.xlsx",
-    "code/fujian~65D7E.tmp",
-    "code/fujian~4A119.tmp",
     "图像分析.md",
-    "code/fujian_Y_vs_BMI_scatter.png",
     "正态分布检验.md",
     "README.md",
     "MATLAB-Git-Usage-Guide.md",
