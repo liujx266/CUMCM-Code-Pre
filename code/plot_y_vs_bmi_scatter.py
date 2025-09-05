@@ -121,7 +121,48 @@ def main():
 
     # Grid
     ax.grid(True, linestyle=":", linewidth=0.8, alpha=0.6)
-    ax.legend(frameon=False)
+    ax.legend(frameon=False, loc="upper right")
+
+    # 计算并标注 Spearman ρ、95% CI 和 p 值
+    try:
+        from scipy.stats import spearmanr
+
+        def spearman_ci(xv, yv, n_boot=1000, seed=42):
+            xv = np.asarray(xv, dtype=float)
+            yv = np.asarray(yv, dtype=float)
+            mask = np.isfinite(xv) & np.isfinite(yv)
+            xv, yv = xv[mask], yv[mask]
+            if xv.size < 3:
+                return np.nan, (np.nan, np.nan), np.nan
+            rho, p = spearmanr(xv, yv)
+            rng = np.random.default_rng(seed)
+            n = xv.size
+            boots = []
+            for _ in range(n_boot):
+                idx = rng.integers(0, n, size=n)
+                r_b, _ = spearmanr(xv[idx], yv[idx])
+                if np.isfinite(r_b):
+                    boots.append(r_b)
+            if len(boots) >= 2:
+                lo, hi = np.percentile(boots, [2.5, 97.5])
+            else:
+                lo, hi = (np.nan, np.nan)
+            return rho, (lo, hi), p
+
+        rho, (lo, hi), p = spearman_ci(x, y, n_boot=1000, seed=42)
+        annot = f"Spearman ρ = {rho:.3f}\n95% CI [{lo:.3f}, {hi:.3f}]\np = {p:.3g}"
+        ax.text(
+            0.02,
+            0.98,
+            annot,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=9,
+            bbox=dict(boxstyle="round", facecolor="white", alpha=0.7, edgecolor="none"),
+        )
+    except Exception:
+        print("未能计算Spearman相关/置信区间，请先安装 SciPy：pip install scipy")
 
     fig.tight_layout()
     fig.savefig(output_path)
