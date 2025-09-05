@@ -52,12 +52,10 @@ def main():
 
     # Plot
     fig, ax = plt.subplots(figsize=(8, 4.8), dpi=150)
-    ax.plot(
+    ax.scatter(
         data["week"],
         data["y"],
-        marker="o",
-        markersize=3,
-        linewidth=1.2,
+        s=9,  # approximately markersize=3**2
         color="#1f77b4",
         label="Y染色体浓度",
     )
@@ -65,6 +63,38 @@ def main():
     ax.set_xlabel("检孕周")
     ax.set_ylabel("Y染色体浓度")
     # 不设置标题，按需仅显示坐标轴与图例
+
+    # LOWESS 趋势线 + 95%置信带（若安装了 statsmodels）
+    try:
+        from statsmodels.nonparametric.smoothers_lowess import lowess
+
+        def lowess_with_ci(xv, yv, frac=0.3, it=0, grid=None, n_boot=200, seed=42):
+            xv = np.asarray(xv, dtype=float)
+            yv = np.asarray(yv, dtype=float)
+            if grid is None:
+                grid = np.linspace(np.nanmin(xv), np.nanmax(xv), 200)
+            base = lowess(yv, xv, frac=frac, it=it, return_sorted=True)
+            y_base = np.interp(grid, base[:, 0], base[:, 1])
+            rng = np.random.default_rng(seed)
+            preds = np.empty((n_boot, grid.size), dtype=float)
+            n = xv.size
+            for b in range(n_boot):
+                idx = rng.integers(0, n, size=n)
+                xb, yb = xv[idx], yv[idx]
+                boot = lowess(yb, xb, frac=frac, it=it, return_sorted=True)
+                preds[b] = np.interp(grid, boot[:, 0], boot[:, 1])
+            lower = np.percentile(preds, 2.5, axis=0)
+            upper = np.percentile(preds, 97.5, axis=0)
+            return grid, y_base, lower, upper
+
+        frac = 0.3  # 平滑窗口比例(0~1)，可按需要调整
+        xn = data["week"].to_numpy(dtype=float)
+        yn = data["y"].to_numpy(dtype=float)
+        grid, y_hat, y_lo, y_hi = lowess_with_ci(xn, yn, frac=frac, it=0, n_boot=200, seed=42)
+        ax.fill_between(grid, y_lo, y_hi, color="#ff7f0e", alpha=0.2, label="95% 置信带")
+        ax.plot(grid, y_hat, color="#ff7f0e", linewidth=2.0, label=f"LOWESS (frac={frac})")
+    except Exception:
+        print("未能绘制LOWESS趋势线/置信带，请先安装 statsmodels：pip install statsmodels")
 
     # Emphasize y=0.04 boundary
     boundary = 0.04
