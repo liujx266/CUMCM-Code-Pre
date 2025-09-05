@@ -244,8 +244,7 @@ def main():
     week_grid = np.linspace(df["week_dec"].min(), df["week_dec"].max(), 240)
 
     fig, ax = plt.subplots(figsize=(7,4))
-    rows = []
-    annots = []  # 收集需要标注的时间点，稍后统一排布避免重叠
+    rows = []  # 收集达到阈值的孕周，单独导出为表格
     for grp, bmi0 in bmi_reprs.items():
         Xg = np.c_[week_grid, np.full_like(week_grid, bmi0)]
         if len(qc_cols):
@@ -257,47 +256,54 @@ def main():
             idx = int(np.argmax(p >= tar))
             if p[idx] >= tar:
                 t_star = float(week_grid[idx])
-                ax.axvline(t_star, ls='--', alpha=.25)
-                # 不直接在同一 y 处竖排文字，改为统一收集后分层标注
-                annots.append({
-                    "tar": tar,
-                    "t": t_star,
-                    "label": f'{int(tar*100)}%→{t_star:.1f}周'
-                })
+                ax.axvline(t_star, ls='--', alpha=.25)  # 仅保留参考竖线，不加文字
                 rows.append({"bmi_group": f"{int(grp.left)}-{int(grp.right)}",
                              "target": tar, "t_star_week": t_star})
     ax.axhline(0.90, ls=':', color='gray'); ax.axhline(0.95, ls=':', color='gray')
-    # 统一处理标注，按 tar 分组，避免重叠：在目标线的上下交错堆叠，并用箭头连接
-    for tar in (0.90, 0.95):
-        pts = [a for a in annots if abs(a["tar"] - tar) < 1e-9]
-        if not pts:
-            continue
-        pts.sort(key=lambda x: x["t"])  # 按时间从早到晚
-        dy = 0.04
-        y_up_base = min(tar + 0.03, 0.98)
-        y_dn_base = max(tar - 0.03, 0.02)
-        up_cnt = dn_cnt = 0
-        for k, a in enumerate(pts):
-            if k % 2 == 0:  # 交替放到上方/下方
-                y_text = min(y_up_base + up_cnt * dy, 0.985)
-                va = 'bottom'
-                up_cnt += 1
-            else:
-                y_text = max(y_dn_base - dn_cnt * dy, 0.015)
-                va = 'top'
-                dn_cnt += 1
-            ax.annotate(
-                a["label"], xy=(a["t"], tar), xytext=(a["t"], y_text), textcoords='data',
-                ha='center', va=va,
-                fontsize=8,
-                arrowprops=dict(arrowstyle='-', lw=0.8, alpha=0.35, color='gray')
-            )
     ax.set_ylim(0,1); ax.set_xlabel("孕周"); ax.set_ylabel(f"Pr(Y≥{Y_THRESHOLD*100:.0f}%)")
     ax.legend(ncol=2, fontsize=8)
     savefig(fig, os.path.join(outdir, "LogisticGAM_Prob_vs_Week_byBMI.png"))
 
-    pd.DataFrame(rows).to_csv(os.path.join(outdir,"t_at_targets_by_BMI.csv"),
-                              index=False, encoding="utf-8-sig")
+    # 导出达到阈值的孕周（长表）
+    df_rows = pd.DataFrame(rows)
+    df_rows.to_csv(os.path.join(outdir,"t_at_targets_by_BMI.csv"),
+                   index=False, encoding="utf-8-sig")
+    # 透视为宽表，便于阅读：每个 BMI 组一行，包含 t@90%, t@95%
+    wide = df_rows.pivot(index='bmi_group', columns='target', values='t_star_week')
+    # 列重命名
+    rename_map = {}
+    for c in wide.columns:
+        try:
+            val = float(c)
+        except Exception:
+            val = c
+        if val == 0.90:
+            rename_map[c] = 't_at_90'
+        elif val == 0.95:
+            rename_map[c] = 't_at_95'
+    wide = wide.rename(columns=rename_map).reset_index()
+    # 加入样本量 n（该 BMI 组中样本数）
+    bin_str = pd.cut(df["bmi"], bins=bins)
+    bin_str = bin_str.map(lambda iv: f"{int(iv.left)}-{int(iv.right)}" if pd.notna(iv) else None)
+    counts = bin_str.value_counts().to_dict()
+    wide['n_samples'] = wide['bmi_group'].map(lambda k: counts.get(k, 0))
+    wide = wide[['bmi_group','n_samples'] + [c for c in ['t_at_90','t_at_95'] if c in wide.columns]]
+    wide.to_csv(os.path.join(outdir, "t_at_targets_by_BMI_wide.csv"),
+                index=False, encoding="utf-8-sig")
+    # 同时输出一个 PNG 表格图，便于报告直接引用
+    try:
+        fig_tbl, ax_tbl = plt.subplots(figsize=(6, 0.6 + 0.35*len(wide)))
+        ax_tbl.axis('off')
+        col_labels = list(wide.columns)
+        cell_text = [[f"{x:.1f}" if isinstance(x, (int, float)) and pd.notna(x) else ("" if x is None else str(x)) for x in row]
+                     for row in wide.to_numpy()]
+        table = ax_tbl.table(cellText=cell_text, colLabels=col_labels, loc='center')
+        table.auto_set_font_size(False)
+        table.set_fontsize(9)
+        table.scale(1, 1.2)
+        savefig(fig_tbl, os.path.join(outdir, "t_at_targets_by_BMI_table.png"))
+    except Exception as e:
+        print("生成 PNG 表失败：", e)
     pd.DataFrame({
         "term":["s(week)","s(BMI)","TOTAL_EDF","ROC_AUC","PR_AUC"],
         "edf":[edf_terms_lg[0] if np.isfinite(edf_terms_lg[0]) else np.nan,
