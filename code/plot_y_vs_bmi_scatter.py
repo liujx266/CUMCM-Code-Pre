@@ -62,39 +62,73 @@ def main():
     ax.set_ylabel("Y染色体浓度")
     # 不设置标题，按需仅显示坐标轴与图例
 
-    # LOWESS 趋势线 + 95%置信带（若安装了 statsmodels）
+    # LOWESS 趋势线（若安装了 statsmodels）
     try:
         from statsmodels.nonparametric.smoothers_lowess import lowess
-
-        def lowess_with_ci(xv, yv, frac=0.3, it=0, grid=None, n_boot=200, seed=42):
-            xv = np.asarray(xv, dtype=float)
-            yv = np.asarray(yv, dtype=float)
-            if grid is None:
-                grid = np.linspace(np.nanmin(xv), np.nanmax(xv), 200)
-            # 中心曲线（基于全体样本）
-            base = lowess(yv, xv, frac=frac, it=it, return_sorted=True)
-            y_base = np.interp(grid, base[:, 0], base[:, 1])
-            # 自助法估计置信区间
-            rng = np.random.default_rng(seed)
-            preds = np.empty((n_boot, grid.size), dtype=float)
-            n = xv.size
-            for b in range(n_boot):
-                idx = rng.integers(0, n, size=n)
-                xb, yb = xv[idx], yv[idx]
-                boot = lowess(yb, xb, frac=frac, it=it, return_sorted=True)
-                preds[b] = np.interp(grid, boot[:, 0], boot[:, 1])
-            lower = np.percentile(preds, 2.5, axis=0)
-            upper = np.percentile(preds, 97.5, axis=0)
-            return grid, y_base, lower, upper
 
         frac = 0.3  # 平滑窗口比例(0~1)，可根据数据调整
         xn = np.asarray(x, dtype=float)
         yn = np.asarray(y, dtype=float)
-        grid, y_hat, y_lo, y_hi = lowess_with_ci(xn, yn, frac=frac, it=0, n_boot=200, seed=42)
-        ax.fill_between(grid, y_lo, y_hi, color="#ff7f0e", alpha=0.2, label="95% 置信带")
-        ax.plot(grid, y_hat, color="#ff7f0e", linewidth=2.0, label=f"LOWESS (frac={frac})")
+        low = lowess(yn, xn, frac=frac, it=0, return_sorted=True)
+        ax.plot(low[:, 0], low[:, 1], color="#ff7f0e", linewidth=2.0, label=f"LOWESS (frac={frac})")
     except Exception:
-        print("未能绘制LOWESS趋势线/置信带，请先安装 statsmodels：pip install statsmodels")
+        print("未能绘制LOWESS趋势线，请先安装 statsmodels：pip install statsmodels")
+
+    # 分箱中位数 + 95% CI（自助法）
+    def binned_median_ci(xv, yv, n_bins=8, n_boot=1000, seed=42, min_count=5):
+        xv = np.asarray(xv, dtype=float)
+        yv = np.asarray(yv, dtype=float)
+        mask = np.isfinite(xv) & np.isfinite(yv)
+        xv, yv = xv[mask], yv[mask]
+        if xv.size == 0:
+            return np.array([]), np.array([]), np.array([]), np.array([])
+        edges = np.linspace(np.min(xv), np.max(xv), n_bins + 1)
+        centers = []
+        meds = []
+        los = []
+        his = []
+        rng = np.random.default_rng(seed)
+        for i in range(n_bins):
+            if i < n_bins - 1:
+                m = (xv >= edges[i]) & (xv < edges[i + 1])
+            else:
+                m = (xv >= edges[i]) & (xv <= edges[i + 1])
+            y_bin = yv[m]
+            if y_bin.size == 0:
+                continue
+            med = np.median(y_bin)
+            if y_bin.size >= min_count:
+                n = y_bin.size
+                boots = np.empty(n_boot)
+                for b in range(n_boot):
+                    idx = rng.integers(0, n, size=n)
+                    boots[b] = np.median(y_bin[idx])
+                lo, hi = np.percentile(boots, [2.5, 97.5])
+            else:
+                lo, hi = np.nan, np.nan
+            centers.append(0.5 * (edges[i] + edges[i + 1]))
+            meds.append(med)
+            los.append(lo)
+            his.append(hi)
+        return np.array(centers), np.array(meds), np.array(los), np.array(his)
+
+    c, m, lo, hi = binned_median_ci(x, y, n_bins=8, n_boot=800, seed=42, min_count=5)
+    if c.size > 0:
+        yerr = np.vstack([
+            np.where(np.isfinite(lo), m - lo, np.nan),
+            np.where(np.isfinite(hi), hi - m, np.nan),
+        ])
+        ax.errorbar(
+            c,
+            m,
+            yerr=yerr,
+            fmt="o-",
+            color="#2ca02c",
+            linewidth=1.8,
+            markersize=4,
+            capsize=3,
+            label="分箱中位数 ±95% CI",
+        )
 
     # Emphasize y=0.04 boundary
     boundary = 0.04
