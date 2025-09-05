@@ -131,6 +131,39 @@ def main():
             label="分箱中位数 ±95% CI",
         )
 
+    # 额外：按孕周分箱绘制Y浓度的 90% 与 10% 分位数趋势
+    def binned_quantile(xv, yv, q=0.9, n_bins=12, min_count=5):
+        xv = np.asarray(xv, dtype=float)
+        yv = np.asarray(yv, dtype=float)
+        mask = np.isfinite(xv) & np.isfinite(yv)
+        xv, yv = xv[mask], yv[mask]
+        if xv.size == 0:
+            return np.array([]), np.array([])
+        edges = np.linspace(np.min(xv), np.max(xv), n_bins + 1)
+        centers = []
+        qs = []
+        for i in range(n_bins):
+            if i < n_bins - 1:
+                m = (xv >= edges[i]) & (xv < edges[i + 1])
+            else:
+                m = (xv >= edges[i]) & (xv <= edges[i + 1])
+            y_bin = yv[m]
+            if y_bin.size >= min_count:
+                centers.append(0.5 * (edges[i] + edges[i + 1]))
+                qs.append(np.quantile(y_bin, q))
+        if len(centers) == 0:
+            return np.array([]), np.array([])
+        return np.array(centers), np.array(qs)
+
+    x_arr = data["week"].to_numpy(dtype=float)
+    y_arr = data["y"].to_numpy(dtype=float)
+    c90, q90 = binned_quantile(x_arr, y_arr, q=0.9, n_bins=12, min_count=5)
+    c10, q10 = binned_quantile(x_arr, y_arr, q=0.1, n_bins=12, min_count=5)
+    if c90.size > 0:
+        ax.plot(c90, q90, linestyle="--", color="#9467bd", linewidth=2.0, label="P90 趋势")
+    if c10.size > 0:
+        ax.plot(c10, q10, linestyle="--", color="#8c564b", linewidth=2.0, label="P10 趋势")
+
     # Emphasize y=0.04 boundary
     boundary = 0.04
     ax.axhline(boundary, color="crimson", linestyle="--", linewidth=1.5, label="分界线 0.04")
